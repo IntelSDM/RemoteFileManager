@@ -5,8 +5,6 @@
 enum class CreateUserResult
 {
 	UserAlreadyExists,
-	SerialTooLong,
-	HardwareHashTooLong,
 	UsernameTooLong,
 	PasswordTooLong,
 	UsernameTooShort,
@@ -18,9 +16,6 @@ enum class LoginUserResult
 {
 	UserDoesNotExist,
 	IncorrectPassword,
-	InvalidHardware,
-	InvalidSerial,
-	Banned,
 	Success,
 	Injection
 };
@@ -49,10 +44,9 @@ private:
 	std::string GenerateKeyName();
 	Cryptography Cryptography; // We use a class instance instead of a static namespace as we are multithreading.
 public:
-	CreateUserResult CreateUser(const std::wstring& username, const std::wstring& password, const std::wstring& cpuname, const std::wstring& gpuname, const std::wstring& motherboard,
-		const std::wstring& ramsize, const std::vector<std::string>& driveserials, const std::vector<std::string> ramserials, const std::string moboserial);
-	LoginUserResult LoginUser(const std::wstring& username, const std::wstring& password, const std::wstring& cpuname, const std::wstring& gpuname, const std::wstring& motherboard,
-		const std::wstring& ramsize, const std::vector<std::string>& driveserials, const std::vector<std::string> ramserials, const std::string moboserial);
+	CreateUserResult CreateUser(const std::wstring& username, const std::wstring& password);
+	LoginUserResult LoginUser(const std::wstring& username, const std::wstring& password);
+	void StoreFile(const std::wstring& username);
 	Database();
 	~Database();
 };

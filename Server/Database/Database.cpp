@@ -15,6 +15,7 @@ Database::Database()
 	Database::StartDatabase();
 	Database::CreateDatabase();
 	Database::CreateTables();
+	Database::CreateUser(L"Test", L"Test12345");
 }
 std::string Database::ToLower(const std::string& input)
 {
@@ -132,113 +133,9 @@ void Database::CreateDatabase()
 		}
 	}
 }
-ResetPasswordResult Database::ResetPassword(const std::wstring& username, const std::wstring& newpassword, const std::wstring& cpuname, const std::wstring& gpuname, const std::wstring& motherboard,
-	const std::wstring& ramsize, const std::vector<std::string>& driveserials, const std::vector<std::string> ramserials, const std::string moboserial)
-{
-	if (username.length() > 255)
-	{
-		return ResetPasswordResult::UsernameTooLong;
-	}
-	if (newpassword.length() > 255)
-	{
-		return ResetPasswordResult::PasswordTooLong;
-	}
-	try
-	{
-		Connection->setSchema(DatabaseNames[ActiveDatabase]);
-		sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
-		statement->setString(1, ToSQLString(ToLower(username)));
-		sql::ResultSet* result = statement->executeQuery();
-		if (!result->next())
-		{
-			return ResetPasswordResult::UserDoesNotExist;
-		}
-		int userid = result->getInt(1);
-		delete result;
-		delete statement;
-		{
-			for (std::string serial : ramserials)
-			{
-
-				sql::PreparedStatement* statement = Connection->prepareStatement("SELECT RamSerial FROM RamHwids WHERE RamSerial = ? And UserID = ?");
-				statement->setString(1, serial);
-				statement->setInt(2, userid);
-				sql::ResultSet* result = statement->executeQuery();
-				if (!result->next())
-				{
-					return ResetPasswordResult::InvalidSerial;
-				}
-
-			}
-			for (std::string serial : driveserials)
-			{
-
-				sql::PreparedStatement* statement = Connection->prepareStatement("SELECT DriveSerial FROM DiskHwids WHERE DriveSerial = ? And UserID = ?");
-				statement->setString(1, serial);
-				statement->setInt(2, userid);
-				sql::ResultSet* result = statement->executeQuery();
-				if (!result->next())
-				{
-					return ResetPasswordResult::InvalidSerial;
-				}
-
-			}
-			{
-				sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM MotherboardHwids WHERE MoboSerial = ? And UserID = ?");
-				statement->setString(1, moboserial);
-				statement->setInt(2, userid);
-				sql::ResultSet* result = statement->executeQuery();
-				if (!result->next())
-				{
-					return ResetPasswordResult::InvalidSerial;
-				}
-			}
-			{
-				sql::PreparedStatement* statement = Connection->prepareStatement("SELECT ActiveHwid FROM Users WHERE UserID = ?");
-				statement->setInt(1, userid);
-				sql::ResultSet* result = statement->executeQuery();
-				result->next();
-				int activehwid = result->getInt(1);
-
-				statement = Connection->prepareStatement("SELECT HWIDHash FROM HwidTable WHERE UserID = ? And HwidInstance = ?");
-				statement->setInt(1, userid);
-				statement->setInt(2, activehwid);
-				result = statement->executeQuery();
-				if (!result->next())
-				{
-					std::wcout << Username + L": Unset HWID" << std::endl;
-					ResetPasswordResult::InvalidHardwareHash;
-				}
-				sql::SQLString hwidhash = result->getString(1);
-				if (SQLStringToWString(hwidhash) != sha256(cpuname + gpuname + ramsize + motherboard))
-				{
-					return ResetPasswordResult::InvalidHardwareHash;
-				}
-			}
-			{
-				sql::PreparedStatement* statement = Connection->prepareStatement("UPDATE Users SET Password = ?, Salt = ? WHERE UserID = ?");
-				std::wstring salt = GenerateSalt();
-
-				statement->setString(1, ToSQLString(sha256(newpassword + salt)));
-				statement->setString(2, ToSQLString(salt));
-				statement->setInt(3, userid);
-				statement->execute();
-			}
-
-		}
-		return ResetPasswordResult::Success;
-
-	}
-	catch (sql::SQLException ex)
-	{
-		return ResetPasswordResult::Injection;
-	}
-}
-
-
 void Database::CreateTables()
 {
-	// we do this for all our databases so we can set up a database such as a development database and commercial database with the same tables
+	// we do this for all our databases so we can set up a database such as a development database and commercial database with the same tables	
 	for (std::string database : Database::DatabaseNames)
 	{
 	Database:Connection->setSchema(database);
@@ -268,6 +165,15 @@ void Database::CreateTables()
 				"Encryption VARCHAR(255),"
 				"FOREIGN KEY(UserID) REFERENCES Users(UserID))");
 		}
+		if (usedtables[Database::ToLower("FilesTable")] == false)
+		{
+			Connection->createStatement()->execute("CREATE TABLE FilesTable ("
+				"FileID INT AUTO_INCREMENT PRIMARY KEY,"
+				"UserID INT,"
+				"FileName VARCHAR(255),"
+				"FOREIGN KEY(UserID) REFERENCES Users(UserID))");
+		}
+
 		delete res;
 	}
 }
@@ -278,10 +184,44 @@ void Database::StartDatabase()
 
 }
 
+void Database::StoreFile(const std::wstring& username)
+{
+	Connection->setSchema(DatabaseNames[ActiveDatabase]);
+	int userid = 0;
+	{
+		sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+		statement->setString(1, ToSQLString(ToLower(username)));
+		sql::ResultSet* result = statement->executeQuery();
 
+		if (!result->next())
+		{
+			std::cout << "User Doesn't Exist" << std::endl;
+			return;
 
-LoginUserResult Database::LoginUser(const std::wstring& username, const std::wstring& password, const std::wstring& cpuname, const std::wstring& gpuname, const std::wstring& motherboard,
-	const std::wstring& ramsize, const std::vector<std::string>& driveserials, const std::vector<std::string> ramserials, const std::string moboserial)
+		}
+		userid = result->getInt(1);
+		delete result;
+		delete statement;
+	}
+	std::string encryptionkey = "";
+	{
+		sql::PreparedStatement* statement = Connection->prepareStatement("SELECT Encryption FROM EncryptionTable WHERE UserID = ?");
+		statement->setInt(1, userid);
+		sql::ResultSet* result = statement->executeQuery();
+		if (!result->next())
+		{
+			std::cout << "Encryption Key Doesn't Exist" << std::endl;
+			return;
+		}
+		encryptionkey = result->getString(1);
+		encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);
+		delete result;
+		delete statement;
+
+	}
+}
+
+LoginUserResult Database::LoginUser(const std::wstring& username, const std::wstring& password)
 {
 	try
 	{
@@ -333,128 +273,7 @@ LoginUserResult Database::LoginUser(const std::wstring& username, const std::wst
 			}
 			delete statement;
 		}
-		{
-			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT ActiveHwid FROM Users WHERE Username = ?");
-			statement->setString(1, ToSQLString(ToLower(username)));
-			sql::ResultSet* result = statement->executeQuery();
-			result->next();
-			int activehwid = result->getInt(1);
-
-
-			statement = Connection->prepareStatement("SELECT HWIDHash FROM HwidTable WHERE UserID = ? And HwidInstance = ?");
-			statement->setInt(1, userid);
-			statement->setInt(2, activehwid);
-			result = statement->executeQuery();
-			if (!result->next())
-			{
-				std::wcout << Username + L": Unset HWID" << std::endl;
-			}
-			sql::SQLString hwidhash = result->getString(1);
-			if (SQLStringToWString(hwidhash) != sha256(cpuname + gpuname + ramsize + motherboard))
-			{
-				std::cout << "HWID Mismatch" << std::endl;
-				return LoginUserResult::InvalidHardware;
-			}
-			auto now = std::chrono::system_clock::now();
-			std::time_t time = std::chrono::system_clock::to_time_t(now);
-			std::tm localtime = *std::localtime(&time);
-			std::string year = std::to_string(localtime.tm_year + 1900);
-			std::string month = std::to_string(localtime.tm_mon + 1);
-			std::string day = std::to_string(localtime.tm_mday);
-			std::string hour = std::to_string(localtime.tm_hour);
-			std::string minute = std::to_string(localtime.tm_min);
-			std::string second = std::to_string(localtime.tm_sec);
-			std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
-			for (std::string serial : driveserials)
-			{
-				if (serial.length() > 255)
-				{
-					std::cout << "Serial Too Long" << std::endl;
-					return LoginUserResult::InvalidSerial;
-				}
-
-				statement = Connection->prepareStatement("SELECT DriveSerial FROM DiskHwids WHERE UserID = ? And DriveSerial = ?");
-				statement->setInt(1, userid);
-				statement->setString(2, serial);
-				result = statement->executeQuery();
-				if (!result->next())
-				{
-					std::cout << "Unset Drive HWID Error" << std::endl;
-					sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO DiskHwids (UserID, TimeOfCreation, DriveSerial, Banned) VALUES (?, ?, ?, ?)");
-					statement->setInt(1, userid);
-					statement->setString(2, timeofcreation);
-					statement->setString(3, serial);
-					statement->setInt(4, 0);
-					statement->execute();
-				}
-
-			}
-			for (std::string serial : ramserials)
-			{
-				if (serial.length() > 255)
-				{
-					std::cout << "Serial Too Long" << std::endl;
-					return LoginUserResult::InvalidSerial;
-				}
-				statement = Connection->prepareStatement("SELECT RamSerial FROM RamHwids WHERE UserID = ? And RamSerial = ?");
-				statement->setInt(1, userid);
-				statement->setString(2, serial);
-				result = statement->executeQuery();
-				if (!result->next())
-				{
-					std::cout << "Unset Ram HWID Error" << std::endl;
-					sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO RamHwids (UserID, TimeOfCreation, RamSerial, Banned) VALUES (?, ?, ?, ?)");
-					statement->setInt(1, userid);
-					statement->setString(2, timeofcreation);
-					statement->setString(3, serial);
-					statement->setInt(4, 0);
-					statement->execute();
-				}
-
-			}
-			if (moboserial.length() > 255)
-			{
-				std::cout << "Serial Too Long" << std::endl;
-				return LoginUserResult::InvalidSerial;
-			}
-			statement = Connection->prepareStatement("SELECT MoboSerial FROM MotherboardHwids WHERE UserID = ? And MoboSerial = ?");
-			statement->setInt(1, userid);
-			statement->setString(2, moboserial);
-			result = statement->executeQuery();
-			if (!result->next())
-			{
-				std::cout << "Unset Mobo HWID Error" << std::endl;
-				statement = Connection->prepareStatement("INSERT INTO MotherboardHwids (UserID, TimeOfCreation, MoboSerial, Banned) VALUES (?, ?, ?, ?)");
-				statement->setInt(1, userid);
-				statement->setString(2, timeofcreation);
-				statement->setString(3, moboserial);
-				statement->setInt(4, 0);
-				statement->execute();
-			}
-
-			{
-
-				statement = Connection->prepareStatement("SELECT Reason FROM BannedUsers WHERE UserID = ?");
-				statement->setInt(1, userid);
-				result = statement->executeQuery();
-				if (result->next())
-				{
-					std::cout << "User Banned" << std::endl;
-					BanUser(username, result->getString(1)); // ban any new data they might have used, new serials on login
-					return LoginUserResult::Banned;
-				}
-				if (BanEvasionCheck(userid, driveserials, ramserials, moboserial)) // add check for product so they cant just test till they spoof the bans
-				{
-					std::cout << "User Banned For Evasion" << std::endl;
-					BanUser(username, "Ban Evasion"); // ban evasion, ban new serials and deny them entry
-					return LoginUserResult::Banned;
-				}
-
-			}
-
-			delete result;
-			delete statement;
-		}
+		
 
 		return LoginUserResult::Success;
 	}
@@ -465,8 +284,7 @@ LoginUserResult Database::LoginUser(const std::wstring& username, const std::wst
 
 }
 
-CreateUserResult Database::CreateUser(const std::wstring& username, const std::wstring& password, const std::wstring& cpuname, const std::wstring& gpuname, const std::wstring& motherboard,
-	const std::wstring& ramsize, const std::vector<std::string>& driveserials, const std::vector<std::string> ramserials, const std::string moboserial)
+CreateUserResult Database::CreateUser(const std::wstring& username, const std::wstring& password)
 {
 	try
 	{
@@ -506,11 +324,6 @@ CreateUserResult Database::CreateUser(const std::wstring& username, const std::w
 		std::string minute = std::to_string(localtime.tm_min);
 		std::string second = std::to_string(localtime.tm_sec);
 		std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
-		if (sha256(cpuname + gpuname + ramsize + motherboard).size() > 255)
-		{
-			std::cout << "Hardware Hash Too Long" << std::endl;
-			return CreateUserResult::HardwareHashTooLong;
-		}
 		std::wstring salt = Database::GenerateSalt();
 		if (password.length() < 5)
 		{
@@ -522,34 +335,12 @@ CreateUserResult Database::CreateUser(const std::wstring& username, const std::w
 			std::cout << "Password Too Long" << std::endl;
 			return CreateUserResult::PasswordTooLong;
 		}
-		if (moboserial.length() > 255)
+		
 		{
-			std::cout << "Serial Too Long" << std::endl;
-			return CreateUserResult::SerialTooLong;
-		}
-		for (std::string serial : driveserials)
-		{
-			if (serial.length() > 255)
-			{
-				std::cout << "Serial Too Long" << std::endl;
-				return CreateUserResult::SerialTooLong;
-			}
-		}
-		for (std::string serial : ramserials)
-		{
-			if (serial.length() > 255)
-			{
-				std::cout << "Serial Too Long" << std::endl;
-				return CreateUserResult::SerialTooLong;
-			}
-		}
-
-		{
-			sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO Users (Username, Password, Salt,ActiveHWID) VALUES (?, ?, ?,?)");
+			sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO Users (Username, Password, Salt) VALUES (?, ?, ?)");
 			statement->setString(1, ToSQLString(ToLower(username)));
 			statement->setString(2, ToSQLString(sha256(password + salt)));
 			statement->setString(3, ToSQLString(salt));
-			statement->setInt(4, 0);
 			statement->execute();
 			delete statement;
 		}
@@ -579,52 +370,6 @@ CreateUserResult Database::CreateUser(const std::wstring& username, const std::w
 				delete statement;
 			}
 			delete statement;
-			{
-				sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO HwidTable (UserID, HwidInstance, CPU, GPU,Motherboard, Ram, HWIDHash,TimeOfCreation) VALUES (?, ?, ?, ?, ?,?, ?,?)");
-				statement->setInt(1, userid);
-				statement->setInt(2, 0);
-				statement->setString(3, ToSQLString(cpuname));
-				statement->setString(4, ToSQLString(gpuname));
-				statement->setString(5, ToSQLString(motherboard));
-				statement->setString(6, ToSQLString(ramsize));
-				statement->setString(7, ToSQLString(sha256(cpuname + gpuname + ramsize + motherboard)));
-				statement->setString(8, timeofcreation);
-				statement->execute();
-				delete statement;
-			}
-			{
-				for (std::string serial : driveserials)
-				{
-					sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO DiskHwids (UserID, TimeOfCreation, DriveSerial, Banned) VALUES (?, ?, ?, ?)");
-					statement->setInt(1, userid);
-					statement->setString(2, timeofcreation);
-					statement->setString(3, serial);
-					statement->setInt(4, 0);
-					statement->execute();
-					delete statement;
-				}
-			}
-			{
-				sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO MotherboardHwids (UserID, TimeOfCreation, MoboSerial, Banned) VALUES (?, ?, ?, ?)");
-				statement->setInt(1, userid);
-				statement->setString(2, timeofcreation);
-				statement->setString(3, moboserial);
-				statement->setInt(4, 0);
-				statement->execute();
-				delete statement;
-			}
-			{
-				for (std::string serial : ramserials)
-				{
-					sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO RamHwids (UserID, TimeOfCreation, RamSerial, Banned) VALUES (?, ?, ?, ?)");
-					statement->setInt(1, userid);
-					statement->setString(2, timeofcreation);
-					statement->setString(3, serial);
-					statement->setInt(4, 0);
-					statement->execute();
-					delete statement;
-				}
-			}
 		}
 		return CreateUserResult::Success;
 	}
