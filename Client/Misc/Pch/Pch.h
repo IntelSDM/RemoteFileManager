@@ -21,3 +21,5 @@
 #include <sstream>
 #include <locale>
 #include "json.hpp"
+using json = nlohmann::json;
+#pragma comment(lib, "ws2_32.lib")

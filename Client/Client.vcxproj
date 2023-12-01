@@ -97,7 +97,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\Sockets;$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -115,7 +115,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\Sockets;$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -133,7 +133,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\Sockets;$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -151,7 +151,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp14</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)$(ProjectName)\Sockets;$(SolutionDir)include;$(SolutionDir)$(ProjectName)\Misc;$(SolutionDir)$(ProjectName)\Misc\Pch;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -165,9 +165,13 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Misc\Pch\Pch.cpp" />
+    <ClCompile Include="Sockets\Client.cpp" />
+    <ClCompile Include="Sockets\Sockets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Misc\Pch\Pch.h" />
+    <ClInclude Include="Sockets\Client.h" />
+    <ClInclude Include="Sockets\Sockets.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -30,6 +30,12 @@
     <ClCompile Include="Database\Cryptography\Cryptographs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Sockets\Client.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Sockets\Sockets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Misc\Pch\Pch.h">
@@ -42,6 +48,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Database\Cryptography\Cryptographs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sockets\Client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sockets\Sockets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
