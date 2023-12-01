@@ -253,7 +253,7 @@ LoginUserResult Database::LoginUser(const std::wstring& username, const std::wst
 				return LoginUserResult::UserDoesNotExist;
 			}
 			encryptionkey = result->getString(1);
-			encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);
+			encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);	
 			delete result;
 			delete statement;
 
