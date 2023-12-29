@@ -15,6 +15,7 @@
 #include "TabListBox.h"
 #include "TabListBoxController.h"
 #include "TextBox.h"
+#include "Sockets.h"
 
 int SelectedTab = 0;
 int SelectedSubTab = 0;
@@ -39,8 +40,9 @@ void CreateGUI()
 			auto password = std::make_shared<TextBox>( 10, 60, L"Password", &PasswordText);
 			auto login = std::make_shared<Button>(10, 90, L"Login", []()
 				{
-				MessageBox(NULL, L"Login", L"Login", MB_OK);
+				MessageBox(NULL, L"Login", L"Login", MB_OK);	
 				CreateGUI();
+				
 				});
 			loginpage->Push(username);
 			loginpage->Push(password);

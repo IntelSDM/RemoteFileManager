@@ -1,7 +1,8 @@
 #pragma once
 class Client
 {
-
+protected:
+	const int BufferSize = 4096;
 public:
 
 	std::string IpAddress;

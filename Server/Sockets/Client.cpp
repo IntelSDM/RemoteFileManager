@@ -11,44 +11,48 @@ Client::Client(SOCKET socket)
 constexpr int BufferSize = 4096;
 void Client::SendText(std::string text)
 {
-	text += "|";
-	std::vector<uint8_t> plaintext(text.begin(), text.end());
-	int32_t Result = send(Client::Socket, (char*)plaintext.data(), (int)plaintext.size(), 0);
+	const uint32_t chunksize = BufferSize;
+	uint32_t length = static_cast<uint32_t>(text.size());
+	uint32_t chunksnum = (length + chunksize - 1) / chunksize;
+
+	send(Client::Socket, reinterpret_cast<const char*>(&length), sizeof(length), 0);
+
+	for (uint32_t i = 0; i < chunksnum; ++i)
+	{
+		uint32_t offset = i * chunksize;
+		uint32_t chunklength = std::min(chunksize, length - offset);
+
+		send(Client::Socket, text.c_str() + offset, chunklength, 0);
+	}
 }
 std::string Client::ReceiveText()
 {
-	std::vector<uint8_t> 	recbytes;
-	uint8_t		buffer[BufferSize];
-
-	while (true)
+	uint32_t length;
+	if (recv(Client::Socket, reinterpret_cast<char*>(&length), sizeof(length), 0) <= 0)
 	{
-		int32_t recieved = recv(Client::Socket, (char*)buffer, BufferSize, 0);
+		return "";
+	}
 
-		if (recieved < 0)
-			break;
+	std::string str;
+	const uint32_t chunksize = BufferSize;
+	uint32_t chunksnum = (length + chunksize - 1) / chunksize;
 
-		for (int n = 0; n < recieved; ++n)
+	for (uint32_t i = 0; i < chunksnum; ++i)
+	{
+		uint32_t offset = i * chunksize;
+		uint32_t chunklength = std::min(chunksize, length - offset);
+
+		std::vector<uint8_t> bytes(chunklength + 1);
+		int ret = recv(Client::Socket, reinterpret_cast<char*>(bytes.data()), chunklength, 0);
+
+		if (ret <= 0)
 		{
-			recbytes.push_back(buffer[n]);
+			return "";
 		}
 
-		if (recieved <= BufferSize)
-			break;
-
+		bytes[ret] = '\0';
+		str += reinterpret_cast<char*>(bytes.data());
 	}
-	std::string str(recbytes.begin(), recbytes.end());
+
 	return str;
-}
-void Client::MessageHandler()
-{
-	while (true)
-	{
-		std::string message = Client::ReceiveText(); // halts everything here, goes to recieve a message
-		if (message.size() == 0)
-			return;
-
-		json jsoned = json::parse(message);
-
-
-	}
 }

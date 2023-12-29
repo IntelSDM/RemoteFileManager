@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "init.h"
-
+#include "Sockets.h"
 HWND Hwnd;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -19,6 +19,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	CreateSockets();
 	HWND hWnd;
 	WNDCLASSEX wc;
 	AllocConsole();
