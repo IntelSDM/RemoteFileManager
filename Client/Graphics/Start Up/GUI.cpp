@@ -17,6 +17,7 @@
 #include "TextBox.h"
 #include "Sockets.h"
 #include "RegisterPacket.h"
+#include "LoginPacket.h"
 int SelectedTab = 0;
 int SelectedSubTab = 0;
 int TabCount = 0;
@@ -40,8 +41,29 @@ void CreateGUI()
 			auto password = std::make_shared<TextBox>( 10, 60, L"Password", &PasswordText);
 			auto login = std::make_shared<Button>(10, 90, L"Login", []()
 				{
-				MessageBox(NULL, L"Login", L"Login", MB_OK);	
-				CreateGUI();
+					std::string username(UsernameText.begin(), UsernameText.end());
+					std::string password(PasswordText.begin(), PasswordText.end());
+					LoginPacket packet(username, password);
+					json jsoned;
+					packet.ToJson(jsoned);
+					TCPClient->SendText(jsoned.dump());
+					std::wstring response = L"";
+					while (true)
+					{
+						std::string text = TCPClient->ReceiveText();
+						if (text.size() == 0)
+							continue;
+						response = std::wstring(text.begin(), text.end());
+						break;
+					}
+					MessageBox(NULL, response.c_str(), L"Login", MB_OK);
+					if (response == L"Successful Login")
+					{
+					}
+					else
+					{
+						CreateGUI();
+					}
 				
 				});
 			loginpage->Push(username);

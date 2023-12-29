@@ -32,6 +32,34 @@ void Client::MessageHandler()
 			packet.FromJson(jsoned);
 			OnRegister(packet);
 		}
+		if (jsoned["ID"] == 1)
+		{
+			LoginPacket packet;
+			packet.FromJson(jsoned);
+			OnLogin(packet);
+		}
+	}
+}
+void Client::OnLogin(LoginPacket packet)
+{
+	std::wstring username(packet.Username.begin(), packet.Username.end());
+	std::wstring password(packet.Password.begin(), packet.Password.end());
+	auto result = DB.LoginUser(username, password);
+	switch (result)
+	{
+	case LoginUserResult::UserDoesNotExist:
+		SendText("User Doesnt Exist");
+		break;
+	case LoginUserResult::Injection:
+		SendText("MYSQL Injection");
+		break;
+	case LoginUserResult::IncorrectPassword:
+		SendText("Incorrect Password");
+		break;
+	case LoginUserResult::Success:
+		SendText("Successful Login");
+		LoggedIn = true;
+		break;
 	}
 }
 void Client::OnRegister(RegisterPacket packet)
