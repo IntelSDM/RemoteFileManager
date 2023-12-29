@@ -4,8 +4,8 @@
 Client::Client(SOCKET socket)
 {
 	Client::Socket = socket;
-	std::thread thread([&] {MessageHandler(); });
-	thread.detach();
+//	std::thread thread([&] {MessageHandler(); });
+	//thread.detach();
 }
 void Client::SendText(std::string text)
 {

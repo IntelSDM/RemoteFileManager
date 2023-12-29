@@ -9,7 +9,6 @@ public:
 	Client(SOCKET socket);
 	void SendText(std::string Text);
 	std::string ReceiveText();
-	void MessageHandler();
 private:
 	SOCKET Socket;
 

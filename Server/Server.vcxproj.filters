@@ -56,5 +56,8 @@
     <ClInclude Include="Sockets\Sockets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Json\RegisterPacket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
