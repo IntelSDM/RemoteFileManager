@@ -15,7 +15,6 @@ Database::Database()
 	Database::StartDatabase();
 	Database::CreateDatabase();
 	Database::CreateTables();
-	Database::CreateUser(L"Test", L"Test12345");
 }
 std::string Database::ToLower(const std::string& input)
 {

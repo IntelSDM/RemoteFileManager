@@ -57,11 +57,6 @@ LRESULT CALLBACK InputWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 	{
 	case WM_CHAR:
 		Char = wParam;
-	case WM_SETCURSOR:
-		SetClassLongPtr(hWnd, // window handle 
-		                GCLP_HCURSOR, // change cursor 
-		                (LONG_PTR)CurrentCursor); // set cursor
-		break;
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
 		{
