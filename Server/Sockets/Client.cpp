@@ -38,7 +38,34 @@ void Client::MessageHandler()
 			packet.FromJson(jsoned);
 			OnLogin(packet);
 		}
+		if (jsoned["ID"] == 2)
+		{
+			if (!LoggedIn)
+				continue;
+			SendFilePacket packet;
+			packet.FromJson(jsoned);
+			OnFileReceive(packet);
+		}
 	}
+}
+void Client::OnFileReceive(SendFilePacket packet)
+{
+	std::wstring filename(packet.FileName.begin(), packet.FileName.end());
+	std::vector<uint8_t> filedata;
+	while (true) // recieve the file byte array
+	{
+		std::vector<uint8_t> data = ReceiveData();
+		if(data.size() ==0)
+			continue;
+		else
+		{
+			filedata = data;
+		}
+	}
+	if (filedata.size() == 0)
+		return;
+	DB.StoreFile(Username, filename, filedata);
+
 }
 void Client::OnLogin(LoginPacket packet)
 {
@@ -59,6 +86,7 @@ void Client::OnLogin(LoginPacket packet)
 	case LoginUserResult::Success:
 		SendText("Successful Login");
 		LoggedIn = true;
+		Username = username;
 		break;
 	}
 }
@@ -93,7 +121,7 @@ void Client::OnRegister(RegisterPacket packet)
 	}
 
 }
-void Client::SendText(std::string text)
+void Client::SendText(const std::string& text)
 {
 	const uint32_t chunksize = BufferSize;
 	uint32_t length = static_cast<uint32_t>(text.size());
@@ -108,6 +136,53 @@ void Client::SendText(std::string text)
 
 		send(Client::Socket, text.c_str() + offset, chunklength, 0);
 	}
+}
+void Client::SendData(const std::vector<uint8_t>& bytearray)
+{
+	const uint32_t chunksize = BufferSize;
+	uint32_t length = static_cast<uint32_t>(bytearray.size());
+	uint32_t chunksnum = (length + chunksize - 1) / chunksize;
+
+	send(Client::Socket, reinterpret_cast<const char*>(&length), sizeof(length), 0);
+
+	for (uint32_t i = 0; i < chunksnum; ++i)
+	{
+		uint32_t offset = i * chunksize;
+		uint32_t chunklength = std::min(chunksize, length - offset);
+
+		send(Client::Socket, reinterpret_cast<const char*>(bytearray.data()) + offset, chunklength, 0);
+	}
+}
+std::vector<uint8_t> Client::ReceiveData()
+{
+	uint32_t length;
+	if (recv(Client::Socket, reinterpret_cast<char*>(&length), sizeof(length), 0) <= 0)
+	{
+		return {};
+	}
+
+	std::vector<uint8_t> data;
+	const uint32_t chunksize = BufferSize;
+	uint32_t chunksnum = (length + chunksize - 1) / chunksize;
+
+	for (uint32_t i = 0; i < chunksnum; ++i)
+	{
+		uint32_t offset = i * chunksize;
+		uint32_t chunklength = std::min(chunksize, length - offset);
+
+		std::vector<uint8_t> chunk(chunklength);
+
+		int ret = recv(Client::Socket, reinterpret_cast<char*>(chunk.data()), chunklength, 0);
+
+		if (ret <= 0)
+		{
+			return {};
+		}
+
+		data.insert(data.end(), chunk.begin(), chunk.begin() + ret);
+	}
+
+	return data;
 }
 std::string Client::ReceiveText()
 {

@@ -46,7 +46,7 @@ private:
 public:
 	CreateUserResult CreateUser(const std::wstring& username, const std::wstring& password);
 	LoginUserResult LoginUser(const std::wstring& username, const std::wstring& password);
-	void StoreFile(const std::wstring& username);
+	void StoreFile(const std::wstring& username, const std::wstring& filename,const std::vector<uint8_t> filearray);
 	Database();
 	~Database();
 };

@@ -170,6 +170,7 @@ void Database::CreateTables()
 				"FileID INT AUTO_INCREMENT PRIMARY KEY,"
 				"UserID INT,"
 				"FileName VARCHAR(255),"
+				"DateOfCreation VARCHAR(17),"
 				"FOREIGN KEY(UserID) REFERENCES Users(UserID))");
 		}
 
@@ -183,8 +184,12 @@ void Database::StartDatabase()
 
 }
 
-void Database::StoreFile(const std::wstring& username)
+void Database::StoreFile(const std::wstring& username, const std::wstring& filename, const std::vector<uint8_t> filearray)
 {
+	auto now = std::chrono::system_clock::now();
+	std::time_t timenow = std::chrono::system_clock::to_time_t(now);
+	std::tm localtime = *std::localtime(&timenow);
+
 	Connection->setSchema(DatabaseNames[ActiveDatabase]);
 	int userid = 0;
 	{
@@ -218,6 +223,26 @@ void Database::StoreFile(const std::wstring& username)
 		delete statement;
 
 	}
+	{
+		std::string year = std::to_string(localtime.tm_year + 1900);
+		std::string month = std::to_string(localtime.tm_mon + 1);
+		std::string day = std::to_string(localtime.tm_mday);
+		std::string hour = std::to_string(localtime.tm_hour);
+		std::string minute = std::to_string(localtime.tm_min);
+		std::string second = std::to_string(localtime.tm_sec);
+		std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
+
+		sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO FilesTable (UserID, DateOfCreation, FileName) VALUES (?, ?, ?)");
+		statement->setInt(1, userid);
+		std::string str = std::string(filename.begin(), filename.end());
+		statement->setString(2, timeofcreation);
+		statement->setString(3,Cryptography.Base64Encode(Cryptography.EncryptAES(str, encryptionkey)));
+		statement->execute();
+		delete statement;
+
+
+	}
+
 }
 
 LoginUserResult Database::LoginUser(const std::wstring& username, const std::wstring& password)

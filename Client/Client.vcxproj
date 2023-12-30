@@ -215,6 +215,7 @@
     <ClInclude Include="Graphics\Utility\Font.h" />
     <ClInclude Include="Json\LoginPacket.h" />
     <ClInclude Include="Json\RegisterPacket.h" />
+    <ClInclude Include="Json\SendFilePacket.h" />
     <ClInclude Include="Misc\Input.h" />
     <ClInclude Include="Misc\Pch\Pch.h" />
     <ClInclude Include="Misc\Vector.h" />

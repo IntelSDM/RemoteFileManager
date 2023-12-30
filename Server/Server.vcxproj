@@ -182,6 +182,7 @@
     <ClInclude Include="Database\Database.h" />
     <ClInclude Include="Json\LoginPacket.h" />
     <ClInclude Include="Json\RegisterPacket.h" />
+    <ClInclude Include="Json\SendFilePacket.h" />
     <ClInclude Include="Misc\Pch\Pch.h" />
     <ClInclude Include="Sockets\Client.h" />
     <ClInclude Include="Sockets\Sockets.h" />
