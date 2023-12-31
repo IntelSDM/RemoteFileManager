@@ -18,6 +18,7 @@
 #include "Sockets.h"
 #include "RegisterPacket.h"
 #include "LoginPacket.h"
+#include "SendFilePacket.h"
 #include <shobjidl.h> 
 int SelectedTab = 0;
 int SelectedSubTab = 0;
@@ -32,7 +33,7 @@ std::wstring UploaderPath = L"Path";
 void CreateDownloader();
 void CreateGUI()
 {
-	/*MenuEntity = std::make_shared<Container>();
+	MenuEntity = std::make_shared<Container>();
 	auto form = std::make_shared<Form>(100, 100.0f, 300, 250, 2, 30, L"Enter", false);
 	{ 
 		auto tabcontroller = std::make_shared<TabController>();
@@ -109,8 +110,7 @@ void CreateGUI()
 
 	MenuEntity->Push(form);
 	MenuEntity->Draw();
-	MenuEntity->Update();*/
-	CreateDownloader();
+	MenuEntity->Update();
 }
 void CreateDownloader()
 {
@@ -175,7 +175,13 @@ void CreateDownloader()
 						std::istream_iterator<uint8_t>()
 					);
 					file.close();
-
+					std::filesystem::path path(UploaderPath);
+					std::string filename = path.filename().string();
+					SendFilePacket packet(filename);
+					json jsoned;
+					packet.ToJson(jsoned);
+					TCPClient->SendText(jsoned.dump());
+					TCPClient->SendData(contents);
 
 				});
 			uploader->Push(fileupload);

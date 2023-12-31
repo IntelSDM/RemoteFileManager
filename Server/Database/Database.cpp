@@ -171,6 +171,7 @@ void Database::CreateTables()
 				"UserID INT,"
 				"FileName VARCHAR(255),"
 				"DateOfCreation VARCHAR(17),"
+				"FileData BLOB,"
 				"FOREIGN KEY(UserID) REFERENCES Users(UserID))");
 		}
 
@@ -232,11 +233,14 @@ void Database::StoreFile(const std::wstring& username, const std::wstring& filen
 		std::string second = std::to_string(localtime.tm_sec);
 		std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
 
-		sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO FilesTable (UserID, DateOfCreation, FileName) VALUES (?, ?, ?)");
+		sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO FilesTable (UserID, DateOfCreation, FileName, FileData) VALUES (?, ?, ?, ?)");
 		statement->setInt(1, userid);
 		std::string str = std::string(filename.begin(), filename.end());
 		statement->setString(2, timeofcreation);
 		statement->setString(3,Cryptography.Base64Encode(Cryptography.EncryptAES(str, encryptionkey)));
+		std::istringstream inputstream(std::string(filearray.begin(), filearray.end()));
+		std::istream& stream = inputstream;
+		statement->setBlob(4, &stream);
 		statement->execute();
 		delete statement;
 

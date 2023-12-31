@@ -5,6 +5,4 @@ void main()
 {
 	CreateServer();
 	AcceptClients();
-	Database db;
-
 }

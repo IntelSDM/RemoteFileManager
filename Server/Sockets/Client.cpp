@@ -52,14 +52,17 @@ void Client::OnFileReceive(SendFilePacket packet)
 {
 	std::wstring filename(packet.FileName.begin(), packet.FileName.end());
 	std::vector<uint8_t> filedata;
+	printf("Receiving File: %ls\n", filename.c_str());
 	while (true) // recieve the file byte array
 	{
+		printf("RECING\n");
 		std::vector<uint8_t> data = ReceiveData();
 		if(data.size() ==0)
 			continue;
 		else
 		{
 			filedata = data;
+			break;
 		}
 	}
 	if (filedata.size() == 0)
