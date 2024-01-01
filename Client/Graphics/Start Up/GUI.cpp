@@ -226,9 +226,30 @@ void CreateDownloader()
 						tablistbox->Push(std::make_shared<Label>( L"Filename :" + wfilename, 180, 0));
 						tablistbox->Push(std::make_shared<Label>( L"Upload Date: "+wfiledate, 180, 20));
 						tablistbox->Push(std::make_shared<Label>(L"ID:" + wid, 180, 40));
-						tablistbox->Push(std::make_shared<Button>(180, 70, L"Download", []()
+						tablistbox->Push(std::make_shared<Button>(180, 70, L"Download", [intid, filename]()
 							{
-							
+								RequestFileDownload packet(intid);
+								json jsoned;
+								packet.ToJson(jsoned);
+								TCPClient->SendText(jsoned.dump());
+								std::vector<uint8_t> bytearray;
+								while (true)
+								{
+									std::vector<uint8_t> filedata = TCPClient->ReceiveData();
+									if (filedata.size() == 0)
+										return;
+									else
+									{
+										bytearray = filedata;
+										break;
+									}
+								}
+								std::ofstream file(filename, std::ios::out | std::ios::binary);
+								if (!file.is_open())
+									return;
+								file.write(reinterpret_cast<char*>(bytearray.data()), bytearray.size());
+								file.close();
+
 
 							}));
 						tablist->PushBack(tablistbox);

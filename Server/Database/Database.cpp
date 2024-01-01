@@ -372,9 +372,10 @@ std::vector<uint8_t> Database::GetFile(const std::wstring& username, const int& 
 			delete result;
 			delete statement;
 		}
+		printf("File ID: %d\n", fileid);
 		{
-			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT FileData FROM Users WHERE Username = ? AND UserID = ?");
-			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT FileData FROM FilesTable WHERE FileID = ? AND UserID = ?");
+			statement->setInt(1, fileid);
 			statement->setInt(2, userid);
 			sql::ResultSet* result = statement->executeQuery();
 			if (!result->next())
@@ -383,6 +384,7 @@ std::vector<uint8_t> Database::GetFile(const std::wstring& username, const int& 
 				return std::vector<uint8_t>();
 			}
 			std::istream* stream = result->getBlob(1);
+			printf("File Size: %d\n", stream->tellg());
 			std::vector<uint8_t> filedata;
 			while (stream->good())
 			{

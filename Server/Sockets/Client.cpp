@@ -70,7 +70,11 @@ void Client::MessageHandler()
 				continue;
 			RequestFileDownload packet;
 			packet.FromJson(jsoned);
+			printf("Requesting File\n");
 					std::vector<uint8_t> filedata = DB.GetFile(Username, packet.FileID);
+					if (filedata.size() == 0)
+						continue;
+					printf("Sending File\n");
 			SendData(filedata);
 
 		
