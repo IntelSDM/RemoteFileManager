@@ -9,6 +9,10 @@ Tool for file storage on a remote server with user authentication. Allows you to
 
 [![IMAGE ALT TEXT](./Images/1.png)](https://youtu.be/1ZW4xtxGGtY "Video")
 
+## Dependencies:
+[OpenSSL](https://github.com/openssl/openssl) <br>
+[Connector++](https://dev.mysql.com/downloads/connector/cpp/)
+
 ## Features:
 * MySQL Server
 * Dynamic Packets
