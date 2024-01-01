@@ -10,6 +10,7 @@ protected:
 	void OnRegister(RegisterPacket packet);
 	void OnLogin(LoginPacket packet);
 	void OnFileReceive(SendFilePacket packet);
+	void OnFileListRequest();
 	Database DB;
 	bool LoggedIn = false;
 	std::wstring Username;

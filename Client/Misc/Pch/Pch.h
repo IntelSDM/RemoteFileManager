@@ -52,6 +52,8 @@
 #include <locale>
 #include <d2d1_1.h>
 #include <dwrite.h>
+#include <shobjidl.h> 
+#include <utility>
 #include "json.hpp"
 using json = nlohmann::json;
 #pragma comment(lib, "ws2_32.lib")

@@ -19,7 +19,8 @@
 #include "RegisterPacket.h"
 #include "LoginPacket.h"
 #include "SendFilePacket.h"
-#include <shobjidl.h> 
+#include "RequestFilesPacket.h"
+#include "RequestFileDownload.h"
 int SelectedTab = 0;
 int SelectedSubTab = 0;
 int TabCount = 0;
@@ -189,9 +190,56 @@ void CreateDownloader()
 		tabcontroller->Push(uploader);
 		auto downloader = std::make_shared<Tab>(L"Downloader", 95, 60, &SelectedTab, 80, 20);
 		{
+			auto tablist = std::make_shared<TabListBoxController>(10, 40, 160, 240);
+			{
+
+				RequestFilesPacket packet;
+				json jsoned;
+				packet.ToJson(jsoned);
+				TCPClient->SendText(jsoned.dump());
+				printf(jsoned.dump().c_str());
+				int amount = 0;
+				while (true)
+				{
+					printf("Waiting for file list\n");
+					std::string text = TCPClient->ReceiveText();
+					if (text.size() == 0)
+						continue;
+					else
+					{
+						amount = std::stoi(text);
+						break;
+					}
+				}
+				if (amount != 0)
+				{
+					for (int i = 0; i < amount; i++)
+					{
+						std::string id = TCPClient->ReceiveText();
+						int intid = std::stoi(id);
+						std::string filename = TCPClient->ReceiveText();
+						std::string filedate = TCPClient->ReceiveText();
+						std::wstring wfilename(filename.begin(), filename.end());
+						auto tablistbox = std::make_shared<TabListBox>(wfilename);
+						std::wstring wfiledate(filedate.begin(), filedate.end());
+						std::wstring wid(id.begin(), id.end());
+						tablistbox->Push(std::make_shared<Label>( L"Filename :" + wfilename, 180, 0));
+						tablistbox->Push(std::make_shared<Label>( L"Upload Date: "+wfiledate, 180, 20));
+						tablistbox->Push(std::make_shared<Label>(L"ID:" + wid, 180, 40));
+						tablistbox->Push(std::make_shared<Button>(180, 70, L"Download", []()
+							{
+							
+
+							}));
+						tablist->PushBack(tablistbox);
+
+					}
+				}
+			}
+			downloader->Push(tablist);
 			auto getfiles = std::make_shared<Button>(10, 10, L"Refresh", []()
 				{
-
+					CreateDownloader();
 				});
 			downloader->Push(getfiles);
 

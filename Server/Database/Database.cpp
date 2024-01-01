@@ -185,70 +185,261 @@ void Database::StartDatabase()
 
 }
 
-void Database::StoreFile(const std::wstring& username, const std::wstring& filename, const std::vector<uint8_t> filearray)
+StoreFileResult Database::StoreFile(const std::wstring& username, const std::wstring& filename, const std::vector<uint8_t> filearray)
 {
-	auto now = std::chrono::system_clock::now();
-	std::time_t timenow = std::chrono::system_clock::to_time_t(now);
-	std::tm localtime = *std::localtime(&timenow);
-
-	Connection->setSchema(DatabaseNames[ActiveDatabase]);
-	int userid = 0;
+	try 
 	{
-		sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
-		statement->setString(1, ToSQLString(ToLower(username)));
-		sql::ResultSet* result = statement->executeQuery();
+		auto now = std::chrono::system_clock::now();
+		std::time_t timenow = std::chrono::system_clock::to_time_t(now);
+		std::tm localtime = *std::localtime(&timenow);
 
-		if (!result->next())
+		Connection->setSchema(DatabaseNames[ActiveDatabase]);
+		int userid = 0;
 		{
-			std::cout << "User Doesn't Exist" << std::endl;
-			return;
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::ResultSet* result = statement->executeQuery();
+
+			if (!result->next())
+			{
+				std::cout << "User Doesn't Exist" << std::endl;
+				return StoreFileResult::UserDoesNotExist;
+
+			}
+			userid = result->getInt(1);
+			delete result;
+			delete statement;
+		}
+		std::string encryptionkey = "";
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT Encryption FROM EncryptionTable WHERE UserID = ?");
+			statement->setInt(1, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			if (!result->next())
+			{
+				std::cout << "Encryption Key Doesn't Exist" << std::endl;
+				return StoreFileResult::EncryptionDoesNotExist;
+			}
+			encryptionkey = result->getString(1);
+			encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);
+			delete result;
+			delete statement;
 
 		}
-		userid = result->getInt(1);
-		delete result;
-		delete statement;
-	}
-	std::string encryptionkey = "";
-	{
-		sql::PreparedStatement* statement = Connection->prepareStatement("SELECT Encryption FROM EncryptionTable WHERE UserID = ?");
-		statement->setInt(1, userid);
-		sql::ResultSet* result = statement->executeQuery();
-		if (!result->next())
 		{
-			std::cout << "Encryption Key Doesn't Exist" << std::endl;
-			return;
+			std::string year = std::to_string(localtime.tm_year + 1900);
+			std::string month = std::to_string(localtime.tm_mon + 1);
+			std::string day = std::to_string(localtime.tm_mday);
+			std::string hour = std::to_string(localtime.tm_hour);
+			std::string minute = std::to_string(localtime.tm_min);
+			std::string second = std::to_string(localtime.tm_sec);
+			std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
+
+			sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO FilesTable (UserID, DateOfCreation, FileName, FileData) VALUES (?, ?, ?, ?)");
+			statement->setInt(1, userid);
+			std::string str = std::string(filename.begin(), filename.end());
+			statement->setString(2, timeofcreation);
+			statement->setString(3, Cryptography.Base64Encode(Cryptography.EncryptAES(str, encryptionkey)));
+			std::istringstream inputstream(std::string(filearray.begin(), filearray.end()));
+			std::istream& stream = inputstream;
+			statement->setBlob(4, &stream);
+			statement->execute();
+			delete statement;
+
+			return StoreFileResult::Success;
 		}
-		encryptionkey = result->getString(1);
-		encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);
-		delete result;
-		delete statement;
-
 	}
+	catch (sql::SQLException ex)
 	{
-		std::string year = std::to_string(localtime.tm_year + 1900);
-		std::string month = std::to_string(localtime.tm_mon + 1);
-		std::string day = std::to_string(localtime.tm_mday);
-		std::string hour = std::to_string(localtime.tm_hour);
-		std::string minute = std::to_string(localtime.tm_min);
-		std::string second = std::to_string(localtime.tm_sec);
-		std::string timeofcreation = day + "/" + month + "/" + year + " " + hour + ":" + minute;
+	return StoreFileResult::Injection;
+	
+	}
+}
+std::vector<int> Database::GetFileIds(const std::wstring& username)
+{
+	try
+	{
+		Connection->setSchema(DatabaseNames[ActiveDatabase]);
+		int userid = 0;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::ResultSet* result = statement->executeQuery();
 
-		sql::PreparedStatement* statement = Connection->prepareStatement("INSERT INTO FilesTable (UserID, DateOfCreation, FileName, FileData) VALUES (?, ?, ?, ?)");
-		statement->setInt(1, userid);
-		std::string str = std::string(filename.begin(), filename.end());
-		statement->setString(2, timeofcreation);
-		statement->setString(3,Cryptography.Base64Encode(Cryptography.EncryptAES(str, encryptionkey)));
-		std::istringstream inputstream(std::string(filearray.begin(), filearray.end()));
-		std::istream& stream = inputstream;
-		statement->setBlob(4, &stream);
-		statement->execute();
-		delete statement;
+			if (!result->next())
+			{
+				std::cout << "User Doesn't Exist" << std::endl;
+				return std::vector<int>();
 
+			}
+			userid = result->getInt(1);
+			delete result;
+			delete statement;
+		}
+		std::vector<int> fileids;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT FileID FROM FilesTable WHERE UserID = ?");
+			statement->setInt(1, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			while (result->next())
+			{
+				fileids.push_back(result->getInt(1));
+			}
+			delete result;
+			delete statement;
+		}
+		return fileids;
+	}
+	catch (sql::SQLException ex)
+	{
+		return std::vector<int>();
+	}
+}
+std::vector<std::string> Database::GetFileNames(const std::wstring& username)
+{
+	try
+	{
+		Connection->setSchema(DatabaseNames[ActiveDatabase]);
+		int userid = 0;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::ResultSet* result = statement->executeQuery();
 
+			if (!result->next())
+			{
+				std::cout << "User Doesn't Exist" << std::endl;
+				return std::vector<std::string>();
+
+			}
+			userid = result->getInt(1);
+			delete result;
+			delete statement;
+		}
+		std::string encryptionkey = "";
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT Encryption FROM EncryptionTable WHERE UserID = ?");
+			statement->setInt(1, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			if (!result->next())
+			{
+				std::cout << "Encryption Key Doesn't Exist" << std::endl;
+				return std::vector<std::string>();
+			}
+			encryptionkey = result->getString(1);
+			encryptionkey = Cryptography.DecryptAES(Cryptography.Base64Decode(encryptionkey), EncryptionKey);
+			delete result;
+			delete statement;
+
+		}
+		std::vector<std::string> filenames;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT FileName FROM FilesTable WHERE UserID = ?");
+			statement->setInt(1, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			while (result->next())
+			{
+				filenames.push_back(Cryptography.DecryptAES(Cryptography.Base64Decode(result->getString(1)), encryptionkey));
+			}
+			delete result;
+			delete statement;
+		}
+		return filenames;
+	}
+	catch (sql::SQLException ex)
+	{
+		return std::vector<std::string>();
+	}
+}
+std::vector<uint8_t> Database::GetFile(const std::wstring& username, const int& fileid)
+{
+	try
+	{
+		Connection->setSchema(DatabaseNames[ActiveDatabase]);
+		int userid = 0;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::ResultSet* result = statement->executeQuery();
+
+			if (!result->next())
+			{
+				std::cout << "User Doesn't Exist" << std::endl;
+				return std::vector<uint8_t>();
+
+			}
+			userid = result->getInt(1);
+			delete result;
+			delete statement;
+		}
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT FileData FROM Users WHERE Username = ? AND UserID = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			statement->setInt(2, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			if (!result->next())
+			{
+				std::cout << "File Doesn't Exist" << std::endl;
+				return std::vector<uint8_t>();
+			}
+			std::istream* stream = result->getBlob(1);
+			std::vector<uint8_t> filedata;
+			while (stream->good())
+			{
+				filedata.push_back(stream->get());
+			}
+			delete result;
+			delete statement;
+			return filedata;
+		}
+		return std::vector<uint8_t>();
+	}
+	catch (sql::SQLException ex)
+	{
+		return std::vector<uint8_t>();
+	}
+}
+std::vector<std::string> Database::GetFileTimes(const std::wstring& username)
+{
+	try
+	{
+		Connection->setSchema(DatabaseNames[ActiveDatabase]);
+		int userid = 0;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT UserID FROM Users WHERE Username = ?");
+			statement->setString(1, ToSQLString(ToLower(username)));
+			sql::ResultSet* result = statement->executeQuery();
+
+			if (!result->next())
+			{
+				std::cout << "User Doesn't Exist" << std::endl;
+				return std::vector<std::string>();
+
+			}
+			userid = result->getInt(1);
+			delete result;
+			delete statement;
+		}
+		std::vector<std::string> filetimes;
+		{
+			sql::PreparedStatement* statement = Connection->prepareStatement("SELECT DateOfCreation FROM FilesTable WHERE UserID = ?");
+			statement->setInt(1, userid);
+			sql::ResultSet* result = statement->executeQuery();
+			while (result->next())
+			{
+				filetimes.push_back(result->getString(1));
+			}
+			delete result;
+			delete statement;
+		}
+		return filetimes;
+	}
+	catch (sql::SQLException ex)
+	{
+		return std::vector<std::string>();
 	}
 
 }
-
 LoginUserResult Database::LoginUser(const std::wstring& username, const std::wstring& password)
 {
 	try

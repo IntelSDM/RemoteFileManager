@@ -19,7 +19,13 @@ enum class LoginUserResult
 	Success,
 	Injection
 };
-
+enum class StoreFileResult
+{
+	Success,
+	Injection,
+	UserDoesNotExist,
+	EncryptionDoesNotExist
+};
 
 class Database
 {
@@ -46,7 +52,11 @@ private:
 public:
 	CreateUserResult CreateUser(const std::wstring& username, const std::wstring& password);
 	LoginUserResult LoginUser(const std::wstring& username, const std::wstring& password);
-	void StoreFile(const std::wstring& username, const std::wstring& filename,std::vector<uint8_t> filearray);
+	StoreFileResult StoreFile(const std::wstring& username, const std::wstring& filename,std::vector<uint8_t> filearray);
+	std::vector<int> GetFileIds(const std::wstring& username);
+	std::vector<std::string> GetFileNames(const std::wstring& username);
+	std::vector<std::string> GetFileTimes(const std::wstring& username);
+	std::vector<uint8_t> GetFile(const std::wstring& username, const int& fileid);
 	Database();
 	~Database();
 };

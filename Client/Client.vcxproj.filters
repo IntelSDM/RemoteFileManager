@@ -185,5 +185,11 @@
     <ClInclude Include="Json\SendFilePacket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Json\RequestFilesPacket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Json\RequestFileDownload.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

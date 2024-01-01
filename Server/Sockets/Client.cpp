@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Client.h"
-
+#include "RequestFileDownload.h"
 
 Client::Client(SOCKET socket)
 {
@@ -46,16 +46,47 @@ void Client::MessageHandler()
 			packet.FromJson(jsoned);
 			OnFileReceive(packet);
 		}
+		if (jsoned["ID"] == 3) // request of files
+		{
+			printf("Requesting Files\n");
+			if (!LoggedIn)
+				continue;
+			std::vector<int> fileids = DB.GetFileIds(Username);
+			std::vector<std::string> filenames = DB.GetFileNames(Username);
+			std::vector<std::string> filedate = DB.GetFileTimes(Username);
+			SendText(std::to_string(fileids.size()));
+			for (int i = 0; i < fileids.size(); i++)
+			{
+				SendText(std::to_string(fileids[i]));
+				SendText(filenames[i]);
+				SendText(filedate[i]);
+			}
+
+
+		}
+		if (jsoned["ID"] == 4)
+		{
+			if (!LoggedIn)
+				continue;
+			RequestFileDownload packet;
+			packet.FromJson(jsoned);
+					std::vector<uint8_t> filedata = DB.GetFile(Username, packet.FileID);
+			SendData(filedata);
+
+		
+		}
 	}
+}
+void Client::OnFileListRequest()
+{
+
 }
 void Client::OnFileReceive(SendFilePacket packet)
 {
 	std::wstring filename(packet.FileName.begin(), packet.FileName.end());
 	std::vector<uint8_t> filedata;
-	printf("Receiving File: %ls\n", filename.c_str());
 	while (true) // recieve the file byte array
 	{
-		printf("RECING\n");
 		std::vector<uint8_t> data = ReceiveData();
 		if(data.size() ==0)
 			continue;
